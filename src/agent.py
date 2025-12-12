@@ -26,15 +26,6 @@ class RLAgent:
         """Método opcional para agentes que actualizan al final del episodio (ej. Monte Carlo)."""
         pass
 
-class QLearningAgent(RLAgent):
-    """Agente Q-Learning (Off-policy)."""
-    def update(self, state, action, reward, next_state, next_action=None):
-        # Q(S, A) <- Q(S, A) + alpha * [R + gamma * max_a Q(S', a) - Q(S, A)]
-        best_next_action_val = np.max(self.q_table[next_state, :])
-        td_target = reward + self.gamma * best_next_action_val
-        td_error = td_target - self.q_table[state, action]
-        self.q_table[state, action] += self.alpha * td_error
-
 class SarsaAgent(RLAgent):
     """Agente SARSA (On-policy)."""
     def update(self, state, action, reward, next_state, next_action=None):
@@ -47,35 +38,46 @@ class SarsaAgent(RLAgent):
         td_error = td_target - self.q_table[state, action]
         self.q_table[state, action] += self.alpha * td_error
 
-class MonteCarloAgent(RLAgent):
-    """Agente Monte Carlo (First-Visit, Constant Alpha)."""
-    def __init__(self, n_states, n_actions, alpha=0.01, gamma=0.99, epsilon=0.1):
-        super().__init__(n_states, n_actions, alpha, gamma, epsilon)
-        self.episode = []
-
+class QLearningAgent(RLAgent):
+    """Agente Q-Learning (Off-policy)."""
     def update(self, state, action, reward, next_state, next_action=None):
-        # Solo almacenar la transición. La actualización ocurre al final.
-        self.episode.append((state, action, reward))
-
-    def on_episode_end(self):
-        G = 0
-        visited_in_episode = set()
+        # Q(S, A) <- Q(S, A) + alpha * [R + gamma * max_a Q(S', a) - Q(S, A)]
+        # No necesitamos next_action, usamos el max over actions para next_state
         
-        # Recorrer episodio hacia atrás
-        for i in range(len(self.episode) - 1, -1, -1):
-            state, action, reward = self.episode[i]
+        max_next_q_val = np.max(self.q_table[next_state, :])
+        td_target = reward + self.gamma * max_next_q_val
+        td_error = td_target - self.q_table[state, action]
+        self.q_table[state, action] += self.alpha * td_error
+
+class MonteCarloAgent(RLAgent):
+    """Agente Monte Carlo (First-Visit)."""
+    def __init__(self, n_states, n_actions, alpha=0.1, gamma=0.99, epsilon=0.1):
+        super().__init__(n_states, n_actions, alpha, gamma, epsilon)
+        self.episode_history = []
+        
+    def update(self, state, action, reward, next_state, next_action=None):
+        # En Monte Carlo, guardamos la transición y actualizamos al final
+        self.episode_history.append((state, action, reward))
+        
+    def on_episode_end(self):
+        # Calcular retornos G y actualizar Q-table
+        G = 0
+        visited_sa = set()
+        
+        # Recorrer el episodio hacia atrás
+        for state, action, reward in reversed(self.episode_history):
             G = self.gamma * G + reward
             
-            # First-Visit Check
-            # Comprobar si este par (s,a) apareció antes en el episodio
-            previous_occurences = [
-                (self.episode[j][0], self.episode[j][1]) 
-                for j in range(i)
-            ]
-            
-            if (state, action) not in previous_occurences:
-                # Actualizar Q-Table: Q(s,a) <- Q(s,a) + alpha * (G - Q(s,a))
-                self.q_table[state, action] += self.alpha * (G - self.q_table[state, action])
-        
-        # Limpiar historial
-        self.episode = []
+            # First-visit check para (state, action)
+            # Nota: En MC control estricto suele ser first-visit por par (s,a)
+            sa_pair = (state, action)
+            if sa_pair not in visited_sa:
+                visited_sa.add(sa_pair)
+                
+                # Actualización incremental (usando alpha constante en lugar de 1/N(s,a) para non-stationary/simplicidad)
+                # Q(S, A) <- Q(S, A) + alpha * [G - Q(S, A)]
+                old_val = self.q_table[state, action]
+                self.q_table[state, action] += self.alpha * (G - old_val)
+                
+        # Limpiar historia
+        self.episode_history = []

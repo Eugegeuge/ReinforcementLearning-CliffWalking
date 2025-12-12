@@ -1,14 +1,34 @@
 import gymnasium as gym
 import numpy as np
+import sys
+import matplotlib
+matplotlib.use('Agg') # Back-end no interactivo para evitar bloqueos
 import matplotlib.pyplot as plt
-from tqdm import tqdm
-from src.agent import QLearningAgent, SarsaAgent, MonteCarloAgent
-from src.utils import plot_rewards, print_policy
+from src.agent import SarsaAgent
+from src.utils import plot_metrics, print_policy
+import time
 
-def run_experiment(env, agent, n_episodes=500):
+def run_experiment(env, agent, n_episodes=500, max_steps=1000):
     rewards = []
+    steps_list = []
     
-    for episode in tqdm(range(n_episodes), desc=f"Entrenando {agent.__class__.__name__}"):
+    # Límite estricto para evitar bucles (ahora parametrizable)
+    # max_steps ahora viene como argumento
+    
+    # Límite de tiempo global de seguridad (5 minutos)
+    MAX_GLOBAL_TIME = 300 
+    start_time = time.time()
+    
+    print(f"Iniciando entrenamiento con seguridad: Timeout global de {MAX_GLOBAL_TIME}s")
+    
+    for episode in range(n_episodes):
+        # Chequeo de seguridad de tiempo global
+        current_total_time = time.time() - start_time
+        if current_total_time > MAX_GLOBAL_TIME:
+            print(f"\n[ALERTA DE SEGURIDAD] Tiempo máximo excedido ({current_total_time:.2f}s > {MAX_GLOBAL_TIME}s).")
+            print("Abortando entrenamiento y guardando progreso actual...")
+            break
+            
         state, _ = env.reset()
         action = agent.choose_action(state)
         total_reward = 0
@@ -16,7 +36,13 @@ def run_experiment(env, agent, n_episodes=500):
         truncated = False
         steps = 0
         
-        while not (terminated or truncated) and steps < 5000:
+        # Log de progreso más frecuente (cada 5%)
+        log_freq = max(1, n_episodes // 20)
+        if episode % log_freq == 0:
+            elapsed = time.time() - start_time
+            print(f"Episodio {episode}/{n_episodes} - Tiempo: {elapsed:.2f}s - Epsilon: {agent.epsilon:.2f}")
+        
+        while not (terminated or truncated) and steps < max_steps:
             next_state, reward, terminated, truncated, _ = env.step(action)
             next_action = agent.choose_action(next_state)
             
@@ -27,55 +53,80 @@ def run_experiment(env, agent, n_episodes=500):
             action = next_action
             total_reward += reward
             steps += 1
-
             
-        # Hook para agentes que actualizan al final (MC)
+        rewards.append(total_reward)
+        steps_list.append(steps)
+        
+        # Callback para finalizar episodio (necesario para Monte Carlo)
         agent.on_episode_end()
         
-        rewards.append(total_reward)
-        
-    return rewards
+    return {'rewards': rewards, 'steps': steps_list}
 
 def main():
-    # Crear entorno
-    env = gym.make('CliffWalking-v1', is_slippery=True)
-    
-    # Parámetros
-    n_states = env.observation_space.n
-    n_actions = env.action_space.n
-    n_episodes = 500
-    
-    # Inicializar agentes
-    q_agent = QLearningAgent(n_states, n_actions)
-    sarsa_agent = SarsaAgent(n_states, n_actions)
-    mc_agent = MonteCarloAgent(n_states, n_actions)
-    
-    # Entrenar Q-Learning
-    print("--- Iniciando Q-Learning (Off-policy Control) ---")
-    q_rewards = run_experiment(env, q_agent, n_episodes)
-    
-    # Entrenar SARSA
-    print("\n--- Iniciando SARSA (On-policy Control) ---")
-    sarsa_rewards = run_experiment(env, sarsa_agent, n_episodes)
+    try:
+        print("Iniciando ejecución exclusiva de SARSA...")
+        
+        # Crear entorno
+        try:
+            env = gym.make('CliffWalking-v1', is_slippery=True)
+        except:
+            print("Advertencia: 'is_slippery' no aceptado, usando config por defecto.")
+            env = gym.make('CliffWalking-v1')
+        
+        # Parámetros
+        n_states = env.observation_space.n
+        n_actions = env.action_space.n
+        n_episodes = 1000 # Aumentado para más datos
+        
+        # Inicializar solo SARSA
+        agent_name = 'SARSA'
+        agent = SarsaAgent(n_states, n_actions)
+        
+        print(f"\n--- Iniciando {agent_name} ({n_episodes} episodios) ---")
+        metrics = run_experiment(env, agent, n_episodes)
+        
+        # Guardar datos brutos
+        print("\nGuardando datos...")
+        
+        # 1. Guardar tabla Q
+        np.save('sarsa_q_table.npy', agent.q_table)
+        print("- Tabla Q guardada en 'sarsa_q_table.npy'")
+        
+        # 2. Guardar métricas en JSON
+        import json
+        metrics_data = {
+            'rewards': metrics['rewards'],
+            'steps': metrics['steps'],
+            'params': {
+                'n_episodes': n_episodes,
+                'alpha': agent.alpha,
+                'gamma': agent.gamma,
+                'epsilon_initial': agent.epsilon # Nota: si epsilon decae, esto es el inicial o el final segun implementacion
+            }
+        }
+        with open('sarsa_metrics.json', 'w') as f:
+            json.dump(metrics_data, f)
+        print("- Métricas guardadas en 'sarsa_metrics.json'")
+            
+        # Mostrar política aprendida al finalizar
+        print_policy(agent)
 
-    # Entrenar Monte Carlo
-    # print("\n--- Iniciando Monte Carlo (First-Visit) ---")
-    # mc_rewards = run_experiment(env, mc_agent, n_episodes)
-    
-    # Graficar resultados
-    plot_rewards({
-        'Q-Learning': q_rewards,
-        'SARSA': sarsa_rewards,
-        # 'Monte Carlo': mc_rewards
-    })
-    print(f"\nGráfica guardada en 'rewards.png'")
-    
-    # Mostrar políticas finales
-    print_policy(q_agent)
-    print_policy(sarsa_agent)
-    # print_policy(mc_agent)
-    
-    env.close()
+        # Graficar resultados (solo SARSA)
+        # Adaptamos el diccionario para que plot_metrics funcione igual
+        all_metrics = {agent_name: metrics}
+        plot_metrics(all_metrics)
+        print(f"\nGráfica guardada en 'metrics_comparison.png'")
+        
+    except Exception as e:
+        print(f"\n[ERROR CRITICO] Ocurrió un error: {e}")
+        import traceback
+        traceback.print_exc()
+    finally:
+        if 'env' in locals():
+            env.close()
+            print("Entorno cerrado correctamente.")
+            sys.stdout.flush()
+            sys.exit(0)
 
 if __name__ == "__main__":
     main()

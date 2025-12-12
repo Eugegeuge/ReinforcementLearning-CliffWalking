@@ -1,0 +1,20 @@
+{
+    "SARSA (alpha=0.1, gamma=0.9)": {
+        "final_avg_reward": -199.22
+    },
+    "SARSA (alpha=0.1, gamma=0.99)": {
+        "final_avg_reward": -162.42
+    },
+    "SARSA (alpha=0.5, gamma=0.9)": {
+        "final_avg_reward": -471.82
+    },
+    "SARSA (alpha=0.5, gamma=0.99)": {
+        "final_avg_reward": -461.18
+    },
+    "SARSA (alpha=0.9, gamma=0.9)": {
+        "final_avg_reward": -3930.12
+    },
+    "SARSA (alpha=0.9, gamma=0.99)": {
+        "final_avg_reward": -4830.08
+    }
+}

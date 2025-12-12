@@ -1,24 +1,38 @@
 import matplotlib.pyplot as plt
 import numpy as np
 
-def plot_rewards(rewards_dict, window=100):
+def plot_metrics(metrics, window=100):
     """
-    Plotea las recompensas suavizadas.
-    rewards_dict: diccionario {nombre_agente: lista_recompensas}
+    Plotea Recompensas y Pasos por episodio suavizados.
+    metrics: dict {'Algorithm': {'rewards': [], 'steps': []}}
     """
-    plt.figure(figsize=(10, 6))
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(15, 6))
     
-    for name, rewards in rewards_dict.items():
-        # Suavizar curva (Moving Average)
-        smoothed = np.convolve(rewards, np.ones(window)/window, mode='valid')
-        plt.plot(smoothed, label=name)
+    for alg_name, data in metrics.items():
+        # Rewards
+        rewards = data['rewards']
+        smooth_rewards = np.convolve(rewards, np.ones(window)/window, mode='valid')
+        ax1.plot(smooth_rewards, label=alg_name)
         
-    plt.title(f"Recompensas por Episodio (Suavizado: {window})")
-    plt.xlabel("Episodio")
-    plt.ylabel("Recompensa Acumulada")
-    plt.legend()
-    plt.grid(True, alpha=0.3)
-    plt.savefig("rewards.png")
+        # Steps
+        steps = data['steps']
+        smooth_steps = np.convolve(steps, np.ones(window)/window, mode='valid')
+        ax2.plot(smooth_steps, label=alg_name)
+        
+    ax1.set_title(f"Recompensa Media (Ventana: {window})")
+    ax1.set_xlabel("Episodio")
+    ax1.set_ylabel("Recompensa")
+    ax1.legend()
+    ax1.grid(True, alpha=0.3)
+    
+    ax2.set_title(f"Pasos por Episodio (Ventana: {window})")
+    ax2.set_xlabel("Episodio")
+    ax2.set_ylabel("Pasos")
+    ax2.legend()
+    ax2.grid(True, alpha=0.3)
+    
+    plt.tight_layout()
+    plt.savefig("metrics_comparison.png")
     plt.close()
 
 def print_policy(agent, shape=(4, 12)):

@@ -48,6 +48,12 @@ Es el gimnasio.
 - **`plot_rewards`**: Pinta la gráfica `rewards.png`. Si la línea sube, el agente está aprendiendo.
 - **`print_policy`**: Imprime las flechitas en la consola para que veas qué camino ha decidido tomar cada uno.
 
+## 4. Desafíos de Implementación: Bucles Infinitos
+
+En RL, especialmente al inicio del entrenamiento, es común que el agente entre en **bucles infinitos**.
+- **Causa**: El agente descubre que moverse entre dos casillas seguras (ej. Arriba <-> Abajo) tiene coste -1 + -1 = -2, pero caer al acantilado es -100. Si su política actual cree que el acantilado está en todas partes menos ahí, se quedará moviéndose para siempre.
+- **Solución (Safety Locks)**: Hemos implementado un límite de **1000 pasos por episodio**. Si el agente no llega a la meta en 1000 pasos, cortamos el episodio. Esto le obliga a reiniciar y probar otra cosa, evitando que el programa se cuelgue.
+
 ---
 
 ## Resumen para la Entrega

@@ -28,16 +28,23 @@ El entorno está configurado como **estocástico** (`is_slippery=True`), lo que 
 
 ## 🛠️ Uso
 
-Para entrenar los agentes y generar las comparativas, ejecuta el script principal:
+Para entrenar al agente SARSA con los mecanismos de seguridad activados, ejecuta el script principal:
 
 ```bash
 python main.py
 ```
 
 Esto realizará lo siguiente:
-1.  Entrenará a los tres agentes durante 500 episodios.
-2.  Generará una gráfica de recompensas (`rewards.png`).
-3.  Imprimirá por consola las políticas aprendidas.
+1.  Entrenará al agente **SARSA** durante **1000 episodios**.
+2.  Generará una gráfica de recompensas (`metrics_comparison.png`).
+3.  Guardará la tabla Q (`sarsa_q_table.npy`) y métricas (`sarsa_metrics.json`).
+
+## 🛡️ Mecanismos de Seguridad
+
+Para evitar que el entrenamiento se quede colgado (ej. agente dando vueltas en círculos infinitamente), se han implementado:
+
+*   **Timeout Global (300s)**: Si el script tarda más de 5 minutos, se aborta y guarda el progreso.
+*   **Max Steps (1000)**: Si un episodio supera los 1000 pasos, se fuerza la terminación de ese episodio.
 
 ## 📂 Estructura del Proyecto
 
@@ -54,3 +61,5 @@ Esto realizará lo siguiente:
 ## 👥 Autores
 
 *   [Hugo]
+*   Hugo López
+*   Juan Diego Serrato
