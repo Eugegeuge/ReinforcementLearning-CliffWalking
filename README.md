@@ -18,7 +18,7 @@ El entorno está configurado como **estocástico** (`is_slippery=True`), lo que 
 
 1.  Clona este repositorio:
     ```bash
-    git clone <URL_DEL_REPOSITORIO>
+    git clone https://github.com/Eugegeuge/ReinforcementLearning-CliffWalking.git
     cd ReinforcementLearning_CliffWalking
     ```
 2.  Instala las dependencias:
