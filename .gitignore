@@ -1,0 +1,19 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Entornos virtuales
+venv/
+.env
+.venv/
+env/
+
+# IDEs
+.vscode/
+.idea/
+
+# Resultados de ejecución
+*.png
+*.jpg
+walkthrough.md
