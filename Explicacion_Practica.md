@@ -61,3 +61,20 @@ Si te preguntan en la práctica:
 > "¿Por qué Q-Learning y SARSA aprenden caminos distintos?"
 
 **Respuesta**: Porque **Q-Learning** aprende el valor de la política *óptima* (sin exploración), mientras que **SARSA** aprende el valor de la política *que está ejecutando* (incluyendo la exploración aleatoria). Por eso SARSA es más miedoso al principio: "sabe" que puede tropezar y prefiere no arriesgarse cerca del borde.
+
+### Monte Carlo (El "Historiador")
+- **Filosofía**: *"No aprendo hasta que termino el episodio completo."*
+- **Cómo aprende**: Guarda todo lo que ha pasado en un episodio (estado, acción, recompensa) y, cuando termina, repasa la historia hacia atrás para calcular el retorno real (G) obtenido desde cada punto.
+- **Resultado**: Converge a la solución óptima si se le da suficiente tiempo, pero tiene **alta varianza** (porque cada episodio es diferente) y es más lento de actualizar (episodio a episodio, no paso a paso).
+
+## 5. Análisis de Parámetros (Resultados del Estudio)
+
+Hemos realizado un estudio de sensibilidad (`parameter_study.py`) variando Alpha y Epsilon:
+
+### Efecto de Alpha (Tasa de Aprendizaje)
+- **Alpha bajo (0.1)**: Aprendizaje lento pero estable. La curva de recompensa sube suavemente.
+- **Alpha alto (0.9)**: Aprendizaje muy rápido al principio, pero oscila mucho. El agente cambia de opinión drásticamente con cada nueva experiencia.
+
+### Efecto de Epsilon (Exploración)
+- **Epsilon bajo (0.1)**: Converge rápido a una buena política, pero corre el riesgo de quedarse en un óptimo local si no explora suficiente (aunque en CliffWalking esto es menos probable).
+- **Epsilon alto (0.5)**: Nunca termina de estabilizarse en una recompensa alta porque sigue haciendo movimientos aleatorios el 50% del tiempo, cayendo al acantilado constantemente. **SARSA sufre mucho con epsilon alto** porque asume que esos fallos son parte de la política.
