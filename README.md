@@ -60,5 +60,6 @@ Para evitar que el entrenamiento se quede colgado (ej. agente dando vueltas en c
 
 ## 👥 Autores
 
+*   Hugo Sevilla
 *   Hugo López
 *   Juan Diego Serrato
