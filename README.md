@@ -1,65 +1,146 @@
-# Práctica de Aprendizaje por Refuerzo: Cliff Walking
+# 🏔️ Cliff Walking - Reinforcement Learning
 
-Este repositorio contiene la implementación de soluciones para el entorno **Cliff Walking** de Gymnasium, utilizando algoritmos de Aprendizaje por Refuerzo (RL).
+Implementación y análisis comparativo de algoritmos de Aprendizaje por Refuerzo en el entorno **Cliff Walking** de Gymnasium.
 
-Proyecto realizado para la asignatura de **Manipuladores (Grado en Ingeniería Robótica)**.
+**Práctica de Manipuladores - Grado en Ingeniería Robótica**
 
-## 📋 Descripción
+## � Resultados Principales
 
-El objetivo es entrenar agentes capaces de navegar desde un punto de inicio hasta una meta evitando un "acantilado". Se exploran y comparan tres algoritmos:
+| Algoritmo | α óptimo | γ óptimo | ε óptimo | Tasa Éxito | Tiempo |
+|-----------|----------|----------|----------|------------|--------|
+| **SARSA** | 0.1 | 0.99 | 0.01 | **95.6%** | 1.7s |
+| **Q-Learning** | 0.1 | 0.99 | 0.01 | **95.4%** | 2.1s |
+| **Monte Carlo** | 0.01 | 0.99 | 0.01 | 66.4% | 17.2s |
 
-*   **Q-Learning** (Off-policy, TD-Control)
-*   **SARSA** (On-policy, TD-Control)
-*   **Monte Carlo** (First-Visit)
+## 🎯 Descripción
 
-El entorno está configurado como **estocástico** (`is_slippery=True`), lo que añade incertidumbre a las transiciones.
+El objetivo es entrenar agentes que naveguen desde el inicio (S) hasta la meta (G) evitando el acantilado (C):
+
+```
+Start (S)                              Goal (G)
+   ↓                                      ↓
+┌─────────────────────────────────────────┐
+│ · · · · · · · · · · · · │  Fila 0
+│ · · · · · · · · · · · · │  Fila 1  
+│ · · · · · · · · · · · · │  Fila 2
+│ S C C C C C C C C C C G │  Fila 3 (Acantilado)
+└─────────────────────────────────────────┘
+```
+
+**Entorno estocástico**: 10% de probabilidad de acción aleatoria (slippery).
+
+## 🧠 Algoritmos Implementados
+
+### SARSA (On-policy TD)
+```
+Q(s,a) ← Q(s,a) + α[r + γQ(s',a') - Q(s,a)]
+```
+- Aprende de la acción que **realmente toma** (incluyendo exploración)
+- Más conservador, evita el acantilado
+
+### Q-Learning (Off-policy TD)
+```
+Q(s,a) ← Q(s,a) + α[r + γ·max_a'Q(s',a') - Q(s,a)]
+```
+- Aprende la política **óptima** independiente de exploración
+- Más agresivo, puede subestimar riesgos
+
+### Monte Carlo (First-Visit)
+```
+G ← retorno acumulado desde el final del episodio
+Q(s,a) ← Q(s,a) + α[G - Q(s,a)]
+```
+- Actualiza solo al **final del episodio**
+- Alta varianza, lento en entornos estocásticos
+
+## 📁 Estructura del Proyecto
+
+```
+├── src/
+│   ├── agent.py              # Clases base de agentes RL
+│   └── utils.py              # Utilidades y visualización
+│
+├── scripts/
+│   ├── estudios/             # Estudios de hiperparámetros
+│   │   ├── *_epsilon_study.py
+│   │   ├── *_alpha_study.py
+│   │   └── *_gamma_study.py
+│   │
+│   ├── optimos/              # Entrenamientos con config óptima
+│   │   ├── montecarlo_optimo.py
+│   │   ├── sarsa_optimo.py
+│   │   └── qlearning_optimo.py
+│   │
+│   ├── comparaciones/        # Comparaciones entre modelos
+│   └── utilidades/           # Scripts auxiliares
+│
+├── graphs/
+│   ├── montecarlo/           # Gráficos + documentación MC
+│   ├── sarsa/                # Gráficos + documentación SARSA
+│   ├── qlearning/            # Gráficos + documentación Q-Learning
+│   └── comparacion_todos/    # Comparaciones generales
+│
+└── main.py                   # Script principal
+```
 
 ## 🚀 Instalación
 
-1.  Clona este repositorio:
-    ```bash
-    git clone https://github.com/Eugegeuge/ReinforcementLearning-CliffWalking.git
-    cd ReinforcementLearning_CliffWalking
-    ```
-2.  Instala las dependencias:
-    ```bash
-    pip install -r requirements.txt
-    ```
+```bash
+git clone https://github.com/Eugegeuge/ReinforcementLearning-CliffWalking.git
+cd ReinforcementLearning-CliffWalking
+pip install -r requirements.txt
+```
 
 ## 🛠️ Uso
 
-Para entrenar al agente SARSA con los mecanismos de seguridad activados, ejecuta el script principal:
-
+### Ejecutar estudios de parámetros
 ```bash
-python main.py
+python scripts/estudios/sarsa_epsilon_study.py
+python scripts/estudios/montecarlo_alpha_study.py
 ```
 
-Esto realizará lo siguiente:
-1.  Entrenará al agente **SARSA** durante **1000 episodios**.
-2.  Generará una gráfica de recompensas (`metrics_comparison.png`).
-3.  Guardará la tabla Q (`sarsa_q_table.npy`) y métricas (`sarsa_metrics.json`).
+### Entrenar con configuración óptima
+```bash
+python scripts/optimos/sarsa_optimo.py
+python scripts/optimos/qlearning_optimo.py
+python scripts/optimos/montecarlo_optimo.py
+```
 
-## 🛡️ Mecanismos de Seguridad
+### Comparar todos los modelos
+```bash
+python scripts/comparaciones/run_full_training.py
+```
 
-Para evitar que el entrenamiento se quede colgado (ej. agente dando vueltas en círculos infinitamente), se han implementado:
+## � Hallazgos Clave
 
-*   **Timeout Global (300s)**: Si el script tarda más de 5 minutos, se aborta y guarda el progreso.
-*   **Max Steps (1000)**: Si un episodio supera los 1000 pasos, se fuerza la terminación de ese episodio.
+### Por qué SARSA/Q-Learning superan a Monte Carlo en CliffWalking:
 
-## 📂 Estructura del Proyecto
+1. **Actualización paso a paso**: Los métodos TD propagan el conocimiento inmediatamente
+2. **Menor varianza**: No acumulan error de todo el episodio
+3. **Tolerancia a α más alto**: Pueden usar α=0.1 vs α=0.01 de MC
 
-*   `src/`: Código fuente de los agentes (`agent.py`) y utilidades (`utils.py`).
-*   `main.py`: Script principal de ejecución y orquestación.
-*   `Explicacion_Practica.md`: Documentación detallada de los algoritmos y justificación teórica.
-*   `Enunciado.md`: Descripción original de la práctica.
+### Parámetros óptimos encontrados:
 
-## 📊 Resultados Esperados
+| Parámetro | SARSA | Q-Learning | Monte Carlo |
+|-----------|-------|------------|-------------|
+| **Alpha** | 0.1 | 0.1 | 0.01 |
+| **Gamma** | 0.99 | 0.99 | 0.99 |
+| **Epsilon** | 0.01 | 0.01 | 0.01 |
+| **Episodios** | 10K | 10K | 15K |
 
-*   **Q-Learning**: Tiende a aprender el camino óptimo (pegado al acantilado), pero arriesgado durante el entrenamiento.
-*   **SARSA**: Tiende a aprender un camino más seguro (alejado del acantilado) debido a la penalización por caídas durante la exploración.
+## 📖 Documentación
+
+Ver justificación detallada de cada parámetro en:
+- [`graphs/sarsa/JUSTIFICACION_PARAMETROS_SARSA.md`](graphs/sarsa/JUSTIFICACION_PARAMETROS_SARSA.md)
+- [`graphs/qlearning/JUSTIFICACION_PARAMETROS_QLEARNING.md`](graphs/qlearning/JUSTIFICACION_PARAMETROS_QLEARNING.md)
+- [`graphs/montecarlo/JUSTIFICACION_PARAMETROS_MC.md`](graphs/montecarlo/JUSTIFICACION_PARAMETROS_MC.md)
 
 ## 👥 Autores
 
-*   Hugo Sevilla
-*   Hugo López
-*   Juan Diego Serrato
+- Hugo Sevilla
+- Hugo López
+- Juan Diego Serrato
+
+---
+
+**Universidad de Alicante - Grado en Ingeniería Robótica**
