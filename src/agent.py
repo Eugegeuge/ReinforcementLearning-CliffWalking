@@ -50,34 +50,37 @@ class QLearningAgent(RLAgent):
         self.q_table[state, action] += self.alpha * td_error
 
 class MonteCarloAgent(RLAgent):
-    """Agente Monte Carlo (First-Visit)."""
-    def __init__(self, n_states, n_actions, alpha=0.1, gamma=0.99, epsilon=0.1):
+    """Agente Monte Carlo con Epsilon Decay (Every-Visit)."""
+    def __init__(self, n_states, n_actions, alpha=0.1, gamma=0.99, epsilon=1.0, 
+                 min_epsilon=0.01, n_episodes=15000):
         super().__init__(n_states, n_actions, alpha, gamma, epsilon)
         self.episode_history = []
+        self.min_epsilon = min_epsilon
+        self.max_epsilon = epsilon
+        self.decay_rate = 5 / n_episodes  # Como en el notebook
+        self.episode_count = 0
         
     def update(self, state, action, reward, next_state, next_action=None):
         # En Monte Carlo, guardamos la transición y actualizamos al final
         self.episode_history.append((state, action, reward))
         
     def on_episode_end(self):
-        # Calcular retornos G y actualizar Q-table
-        G = 0
-        visited_sa = set()
-        
-        # Recorrer el episodio hacia atrás
-        for state, action, reward in reversed(self.episode_history):
-            G = self.gamma * G + reward
+        # Calcular retornos G y actualizar Q-table (Every-Visit, como en el notebook)
+        if len(self.episode_history) > 0:
+            G = 0
             
-            # First-visit check para (state, action)
-            # Nota: En MC control estricto suele ser first-visit por par (s,a)
-            sa_pair = (state, action)
-            if sa_pair not in visited_sa:
-                visited_sa.add(sa_pair)
+            # Recorrer el episodio hacia atrás (Every-Visit: actualiza todos los pares)
+            for t in range(len(self.episode_history) - 1, -1, -1):
+                state, action, reward = self.episode_history[t]
+                G = reward + self.gamma * G
                 
-                # Actualización incremental (usando alpha constante en lugar de 1/N(s,a) para non-stationary/simplicidad)
+                # Actualización incremental
                 # Q(S, A) <- Q(S, A) + alpha * [G - Q(S, A)]
-                old_val = self.q_table[state, action]
-                self.q_table[state, action] += self.alpha * (G - old_val)
+                self.q_table[state, action] += self.alpha * (G - self.q_table[state, action])
+        
+        # Epsilon decay exponencial (clave para convergencia!)
+        self.episode_count += 1
+        self.epsilon = self.min_epsilon + (self.max_epsilon - self.min_epsilon) * np.exp(-self.decay_rate * self.episode_count)
                 
         # Limpiar historia
         self.episode_history = []
