@@ -17,14 +17,18 @@ Implementación y análisis comparativo de algoritmos de Aprendizaje por Refuerz
 El objetivo es entrenar agentes que naveguen desde el inicio (S) hasta la meta (G) evitando el acantilado (C):
 
 ```
-Start (S)                              Goal (G)
-   ↓                                      ↓
-┌─────────────────────────────────────────┐
-│ · · · · · · · · · · · · │  Fila 0
-│ · · · · · · · · · · · · │  Fila 1  
-│ · · · · · · · · · · · · │  Fila 2
-│ S C C C C C C C C C C G │  Fila 3 (Acantilado)
-└─────────────────────────────────────────┘
+    0   1   2   3   4   5   6   7   8   9  10  11
+  ┌───┬───┬───┬───┬───┬───┬───┬───┬───┬───┬───┬───┐
+0 │ · │ · │ · │ · │ · │ · │ · │ · │ · │ · │ · │ · │
+  ├───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┤
+1 │ · │ · │ · │ · │ · │ · │ · │ · │ · │ · │ · │ · │
+  ├───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┤
+2 │ · │ · │ · │ · │ · │ · │ · │ · │ · │ · │ · │ · │
+  ├───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┤
+3 │ S │ C │ C │ C │ C │ C │ C │ C │ C │ C │ C │ G │
+  └───┴───┴───┴───┴───┴───┴───┴───┴───┴───┴───┴───┘
+  
+  S = Start | G = Goal | C = Cliff (caer = -100)
 ```
 
 **Entorno estocástico**: 10% de probabilidad de acción aleatoria (slippery).
