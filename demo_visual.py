@@ -205,7 +205,7 @@ def run_demo(agent, agent_type, episodes=DEMO_EPISODES):
         render_grid(state, ep, step, total_reward, agent_type)
         time.sleep(STEP_DELAY)
         
-        while not done and step < 100:
+        while not done and step < 50:
             action = agent.choose_action(state, explore=False)  # Sin exploración
             next_state, reward, term, trunc, _ = env.step(action)
             total_reward += reward

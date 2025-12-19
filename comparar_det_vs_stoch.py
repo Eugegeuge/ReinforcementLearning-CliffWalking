@@ -1,0 +1,127 @@
+#!/usr/bin/env python3
+"""
+Comparación Q-Learning: Determinístico vs Estocástico
+Muestra la diferencia de política con y sin slippery.
+"""
+
+import gymnasium as gym
+import numpy as np
+import matplotlib
+matplotlib.use('Agg')
+import matplotlib.pyplot as plt
+import random
+
+EPISODES = 5000
+
+
+class SlipperyCliffWalking(gym.ActionWrapper):
+    def __init__(self, env, slip_probability=0.1):
+        super().__init__(env)
+        self.slip_probability = slip_probability
+
+    def action(self, action):
+        if random.random() < self.slip_probability:
+            return self.env.action_space.sample()
+        return action
+
+
+def train_qlearning(env, episodes=EPISODES):
+    q_table = np.zeros((48, 4))
+    alpha, gamma, epsilon = 0.1, 0.99, 0.1
+    
+    for _ in range(episodes):
+        state, _ = env.reset()
+        done = False
+        steps = 0
+        
+        while not done and steps < 500:
+            action = np.random.randint(4) if np.random.rand() < epsilon else np.argmax(q_table[state])
+            next_state, reward, term, trunc, _ = env.step(action)
+            td = reward + gamma * np.max(q_table[next_state]) - q_table[state, action]
+            q_table[state, action] += alpha * td
+            state = next_state
+            done = term or trunc
+            steps += 1
+    
+    env.close()
+    return q_table
+
+
+def visualize_comparison(q_tables, filename):
+    """Visualiza políticas lado a lado."""
+    fig, axes = plt.subplots(1, 2, figsize=(16, 6))
+    
+    arrows = {0: (0, -0.3), 1: (0.3, 0), 2: (0, 0.3), 3: (-0.3, 0)}
+    
+    for ax, (name, q_table) in zip(axes, q_tables.items()):
+        ax.set_xlim(-0.5, 11.5)
+        ax.set_ylim(-0.5, 3.5)
+        ax.invert_yaxis()
+        ax.set_aspect('equal')
+        
+        for i in range(5):
+            ax.axhline(y=i-0.5, color='black', linewidth=1)
+        for j in range(13):
+            ax.axvline(x=j-0.5, color='black', linewidth=1)
+        
+        ax.fill_between([0.5, 10.5], [2.5, 2.5], [3.5, 3.5], color='red', alpha=0.3)
+        ax.fill_between([-0.5, 0.5], [2.5, 2.5], [3.5, 3.5], color='green', alpha=0.3)
+        ax.fill_between([10.5, 11.5], [2.5, 2.5], [3.5, 3.5], color='blue', alpha=0.3)
+        
+        for row in range(4):
+            for col in range(12):
+                state = row * 12 + col
+                
+                if row == 3 and 0 < col < 11:
+                    ax.text(col, row, 'X', ha='center', va='center', fontsize=14, color='red', fontweight='bold')
+                elif row == 3 and col == 0:
+                    ax.text(col, row, 'S', ha='center', va='center', fontsize=16, fontweight='bold', color='green')
+                elif row == 3 and col == 11:
+                    ax.text(col, row, 'G', ha='center', va='center', fontsize=16, fontweight='bold', color='blue')
+                else:
+                    best_action = np.argmax(q_table[state])
+                    dx, dy = arrows[best_action]
+                    ax.arrow(col - dx/2, row - dy/2, dx, dy, head_width=0.15, head_length=0.1, 
+                            fc='darkgreen', ec='darkgreen', linewidth=2)
+        
+        ax.set_title(name, fontsize=14, fontweight='bold')
+        ax.set_xlabel('Columna')
+        ax.set_ylabel('Fila')
+        ax.set_xticks(range(12))
+        ax.set_yticks(range(4))
+    
+    plt.suptitle('Q-Learning: Efecto del Entorno Estocástico\n(Determinístico vs 10% Slippery)', 
+                 fontsize=14, fontweight='bold')
+    plt.tight_layout()
+    plt.savefig(filename, dpi=150)
+    plt.close()
+    print(f"  Guardado: {filename}")
+
+
+def main():
+    print("\n" + "="*60)
+    print("  Q-LEARNING: DETERMINÍSTICO vs ESTOCÁSTICO")
+    print("="*60)
+    
+    q_tables = {}
+    
+    # Determinístico (sin slippery)
+    print("\n  Entrenando Q-Learning DETERMINÍSTICO...", end=' ', flush=True)
+    env_det = gym.make('CliffWalking-v1')
+    q_tables['Q-Learning DETERMINÍSTICO\n(debería ir cerca del cliff)'] = train_qlearning(env_det)
+    print("✓")
+    
+    # Estocástico (con slippery 10%)
+    print("  Entrenando Q-Learning ESTOCÁSTICO (10% slip)...", end=' ', flush=True)
+    env_stoch = SlipperyCliffWalking(gym.make('CliffWalking-v1'), 0.1)
+    q_tables['Q-Learning ESTOCÁSTICO\n(debería ir por arriba, seguro)'] = train_qlearning(env_stoch)
+    print("✓")
+    
+    visualize_comparison(q_tables, 'graphs/comparacion_todos/qlearning_det_vs_stoch.png')
+    
+    print("\n  ✅ Comparación completada!")
+    print("="*60 + "\n")
+
+
+if __name__ == "__main__":
+    main()

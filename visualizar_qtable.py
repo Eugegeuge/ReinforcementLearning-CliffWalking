@@ -55,7 +55,7 @@ def train(agent, episodes=TRAIN_EPISODES):
                 state, action = next_state, next_action
                 done = term or trunc
                 steps += 1
-        else:  # Q-Learning
+        elif agent['type'] == 'Q-Learning':
             while not done and steps < 500:
                 action = choose_action(agent, state)
                 next_state, reward, term, trunc, _ = env.step(action)
@@ -64,6 +64,20 @@ def train(agent, episodes=TRAIN_EPISODES):
                 state = next_state
                 done = term or trunc
                 steps += 1
+        else:  # Monte Carlo
+            history = []
+            while not done and steps < 500:
+                action = choose_action(agent, state)
+                next_state, reward, term, trunc, _ = env.step(action)
+                history.append((state, action, reward))
+                state = next_state
+                done = term or trunc
+                steps += 1
+            # Actualizar al final del episodio
+            G = 0
+            for s, a, r in reversed(history):
+                G = r + agent['gamma'] * G
+                agent['q_table'][s, a] += agent['alpha'] * (G - agent['q_table'][s, a])
     
     env.close()
     return agent
@@ -117,13 +131,20 @@ def main():
     print("  VISUALIZACIÓN DE Q-TABLES")
     print("="*60)
     
-    for agent_type in ['SARSA', 'Q-Learning']:
+    for agent_type in ['SARSA', 'Q-Learning', 'Monte Carlo']:
         print(f"\n  Entrenando {agent_type}...", end=' ', flush=True)
         agent = create_agent(agent_type)
-        train(agent)
+        episodes = 10000 if agent_type == 'Monte Carlo' else 5000
+        train(agent, episodes)
         print("✓")
         
-        filename = f'graphs/{agent_type.lower().replace("-", "")}/qtable_visualization.png'
+        folder = agent_type.lower().replace("-", "").replace(" ", "")
+        filename = f'graphs/{folder}/qtable_visualization.png'
+        
+        # Crear carpeta si no existe
+        import os
+        os.makedirs(f'graphs/{folder}', exist_ok=True)
+        
         visualize_qtable(agent, filename)
     
     print("\n  ✅ Visualizaciones completadas!")

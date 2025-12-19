@@ -46,7 +46,7 @@ def train_agent(agent_type, episodes=TRAIN_EPISODES):
                 state, action = next_state, next_action
                 done = term or trunc
                 steps += 1
-        else:
+        elif agent_type == 'Q-Learning':
             while not done and steps < 500:
                 action = np.random.randint(4) if np.random.rand() < epsilon else np.argmax(q_table[state])
                 next_state, reward, term, trunc, _ = env.step(action)
@@ -55,17 +55,31 @@ def train_agent(agent_type, episodes=TRAIN_EPISODES):
                 state = next_state
                 done = term or trunc
                 steps += 1
+        else:  # Monte Carlo
+            history = []
+            while not done and steps < 500:
+                action = np.random.randint(4) if np.random.rand() < epsilon else np.argmax(q_table[state])
+                next_state, reward, term, trunc, _ = env.step(action)
+                history.append((state, action, reward))
+                state = next_state
+                done = term or trunc
+                steps += 1
+            G = 0
+            for s, a, r in reversed(history):
+                G = r + gamma * G
+                q_table[s, a] += 0.01 * (G - q_table[s, a])  # alpha bajo para MC
     
     env.close()
     return q_table
 
 
 def visualize_policy(q_tables, filename):
-    """Visualiza políticas lado a lado."""
-    fig, axes = plt.subplots(1, 2, figsize=(16, 6))
+    """Visualiza políticas lado a lado - 3 algoritmos."""
+    fig, axes = plt.subplots(1, 3, figsize=(20, 6))
     
-    # Flechas para cada acción
-    arrows = {0: (0, 0.3), 1: (0.3, 0), 2: (0, -0.3), 3: (-0.3, 0)}  # Arriba, Derecha, Abajo, Izquierda
+    # Flechas para cada acción (con y invertido por invert_yaxis)
+    # Arriba=0, Derecha=1, Abajo=2, Izquierda=3
+    arrows = {0: (0, -0.3), 1: (0.3, 0), 2: (0, 0.3), 3: (-0.3, 0)}
     
     for ax, (name, q_table) in zip(axes, q_tables.items()):
         ax.set_xlim(-0.5, 11.5)
@@ -90,7 +104,7 @@ def visualize_policy(q_tables, filename):
                 state = row * 12 + col
                 
                 if row == 3 and 0 < col < 11:  # Cliff
-                    ax.text(col, row, '💀', ha='center', va='center', fontsize=14)
+                    ax.text(col, row, 'X', ha='center', va='center', fontsize=14, color='red', fontweight='bold')
                 elif row == 3 and col == 0:  # Start
                     ax.text(col, row, 'S', ha='center', va='center', fontsize=16, fontweight='bold', color='green')
                 elif row == 3 and col == 11:  # Goal
@@ -101,7 +115,7 @@ def visualize_policy(q_tables, filename):
                     ax.arrow(col - dx/2, row - dy/2, dx, dy, head_width=0.15, head_length=0.1, 
                             fc='darkgreen', ec='darkgreen', linewidth=2)
         
-        ax.set_title(f'Política: {name}', fontsize=14, fontweight='bold')
+        ax.set_title(f'{name}', fontsize=14, fontweight='bold')
         ax.set_xlabel('Columna')
         ax.set_ylabel('Fila')
         ax.set_xticks(range(12))
@@ -121,9 +135,9 @@ def main():
     print("="*60)
     
     q_tables = {}
-    for agent_type in ['SARSA', 'Q-Learning']:
+    for agent_type, episodes in [('SARSA', 5000), ('Q-Learning', 5000), ('Monte Carlo', 10000)]:
         print(f"\n  Entrenando {agent_type}...", end=' ', flush=True)
-        q_tables[agent_type] = train_agent(agent_type)
+        q_tables[agent_type] = train_agent(agent_type, episodes)
         print("✓")
     
     visualize_policy(q_tables, 'graphs/comparacion_todos/politicas_comparacion.png')
